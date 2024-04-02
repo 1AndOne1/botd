@@ -8,25 +8,22 @@ const bot = new Telegraf("7156035988:AAE43NDXwQucFyLnHfUXLNWIHdekbFRCNAM");
 let filmes = []; 
 let curFilm = []; 
 
-async function parseFilms(searchTerm, chatId) {
+async function parseFilms(filmid, chatId) {
 
     try {
-        const response = await fetch(`https://kinopoiskapiunofficial.tech/api/v2.2/films/${id}`, {
-            method: 'GET',
-            headers: {
-            'X-API-KEY': '3a87431b-e13d-4234-bcb6-f9734ddc253f',
-            'Content-Type': 'application/json',
-            },
-            })
-        
+        const url = `https://moviesdatabase.p.rapidapi.com/titles/${filmid}`; 
+        const options = { method: 'GET', 
+        headers: { 'X-RapidAPI-Key': 'de6e9e4ddbmshe5c68a71e594397p1b3004jsn0757cb37bb7e', 
+        'X-RapidAPI-Host': 'moviesdatabase.p.rapidapi.com' } };
+
+        const response = await fetch(url, options); 
         const data = await response.json();
-
         filmes = data.items; 
-
-        curFilm = filmes.slice(0, 5); 
+        curFilm = filmes.slice(0, 1); 
         const message = getFilmMessage(curFilm);
 
         bot.telegram.sendMessage(chatId, message, {
+            
             reply_markup: {
                 inline_keyboard: [
                     [{ text: 'Еще фильмы', callback_data: 'more_films' }],
@@ -42,7 +39,7 @@ async function parseFilms(searchTerm, chatId) {
 function getFilmMessage(films) {
     let message = '';
     films.forEach((film, index) => {
-        message +=` Фильм ${index + 1}:\n${film.nameRu}\nЖанр: ${film.genre}\nГод выпуска: ${film.startYear}\n\n`;
+        message +=` Фильм ${index + 1}:\n${film.title}\nЖанр: ${film.genre}\n\n`;
     });
     return message;
 }
@@ -62,9 +59,9 @@ bot.command('start', ctx => {
 
 bot.on('text', ctx => {
     const chatId = ctx.chat.id;
-    const searchTerm = ctx.message.text;
+    const filmid = ctx.message.text;
 
-    parseFilms(searchTerm, chatId);
+    parseFilms(filmid, chatId);
 });
 bot.action('more_films', ctx => {
     curFilm = filmes.slice(curFilm.length, curFilm.length + 1);
