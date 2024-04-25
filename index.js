@@ -1,33 +1,37 @@
 const { Telegraf } = require('telegraf');
-const fetch = require('node-fetch');
-const cheerio = require('cheerio');
 
-const bot = new Telegraf("7156035988:AAE43NDXwQucFyLnHfUXLNWIHdekbFRCNAM");
+const bot = new Telegraf("6478194199:AAGJnLgrc_aNFeps9QpVZds7nIyCQkxOI7U");
 
 
-let filmes = []; 
-let curFilm = []; 
+let allVacancies = []; 
+let currentVacancies = [];
 
-async function parseFilms(filmid, chatId) {
+
+async function items(itemName) {
+    const url =`https://eldenring.fanapis.com/api/items?name=${itemName}`;
+    console.log(url)
+    const response = await fetch(url);
+    const abc = await response.json();
+    const itemData = abc.data
+    const result = JSON.stringify(itemData)
+    let msg = ""
+    msg += result.split(",").join("\n") 
+    return msg
+}
+
+
+
+async function parseVacancies(chatId, itemName) {
 
     try {
-        const url = `https://moviesdatabase.p.rapidapi.com/titles/${filmid}`; 
-        const options = { method: 'GET', 
-        headers: { 'X-RapidAPI-Key': 'de6e9e4ddbmshe5c68a71e594397p1b3004jsn0757cb37bb7e', 
-        'X-RapidAPI-Host': 'moviesdatabase.p.rapidapi.com' } };
-
-        const response = await fetch(url, options); 
-        const data = await response.json();
-        filmes = data.items; 
-        curFilm = filmes.slice(0, 1); 
-        const message = getFilmMessage(curFilm);
+        const message = await items(itemName);
+        console.log(message)
 
         bot.telegram.sendMessage(chatId, message, {
-            
             reply_markup: {
                 inline_keyboard: [
-                    [{ text: 'Еще фильмы', callback_data: 'more_films' }],
-                    [{ text: 'Другой фильм', callback_data: 'other_fims' }]
+                    [{ text: 'Еще предметы', callback_data: 'more_items' }],
+                    [{ text: 'Другой предмет', callback_data: 'other_item' }]
                 ]
             }
         });
@@ -36,47 +40,49 @@ async function parseFilms(filmid, chatId) {
     }
 }
 
-function getFilmMessage(films) {
-    let message = '';
-    films.forEach((film, index) => {
-        message +=` Фильм ${index + 1}:\n${film.title}\nЖанр: ${film.genre}\n\n`;
-    });
-    return message;
-}
 
-
-
-bot.action('other_film', ctx => {
-    filmes = [];
-    curFilm = [];
-    ctx.reply('Введите название, чтобы найти фильм:');
+bot.action('other_item', ctx => {
+    allVacancies = [];
+    currentVacancies = [];
+    ctx.reply('Введите другой предмет, чтобы найти его:');
 });
 
 bot.command('start', ctx => {
     const chatId = ctx.chat.id;
-    ctx.reply('Привет! Введите название фильма, чтобы найти его:');
+    ctx.reply('Привет! Введите предмет из игры, чтобы увидеть его характеристики:');
 });
-
-bot.on('text', ctx => {
+bot.on('text', async ctx => {
     const chatId = ctx.chat.id;
-    const filmid = ctx.message.text;
-
-    parseFilms(filmid, chatId);
+    const itemName = ctx.message.text
+    items(itemName)
+    parseVacancies(chatId, itemName);
 });
-bot.action('more_films', ctx => {
-    curFilm = filmes.slice(curFilm.length, curFilm.length + 1);
-    const message = getFilmMessage(curFilm);
-
-    if (ctx.update.message && message !== ctx.update.message.text) {
-        ctx.editMessageText(message, {
-            reply_markup: {
-                inline_keyboard: [
-                    [{ text: 'Еще фильмы', callback_data: 'more_filmes' }],
-                    [{ text: 'Другой фильм', callback_data: 'other_film' }]
-                ]
-            }
-        });
+bot.action('more_items', async ctx => {
+    const chatId = ctx.chat.id;
+    
+    async function itemsList() { 
+        let number = 1
+        const url =`https://eldenring.fanapis.com/api/items?limit=1&page=${number}`;
+        const response = await fetch(url);
+        const abc = await response.json();
+        const itemData = abc.data
+        const result = JSON.stringify(itemData)
+        let msg = ""
+        msg += result.split(",").join("\n")
+        
+        return msg
     }
+    const message = await itemsList();
+    
+    bot.telegram.sendMessage(chatId, message, {
+        reply_markup: {
+            inline_keyboard: [
+                [{ text: 'Еще предметы', callback_data: 'more_items' }],
+                [{ text: 'Другой предмет', callback_data: 'other_item' }]
+            ]
+        }
+    })
+    itemsList.number++
 });
 
 bot.launch();
